@@ -1,0 +1,715 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Syndicate City</title>
+  <style>
+    :root {
+      --bg: #121416;
+      --panel: #1b1f24;
+      --panel-2: #242a31;
+      --text: #e4e8ed;
+      --muted: #9aa5b1;
+      --green: #54d27c;
+      --red: #ff5f6d;
+      --blue: #66a8ff;
+      --yellow: #f4cd66;
+      --border: #333b45;
+      --shadow: 0 8px 24px rgba(0,0,0,.3);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-width: 800px;
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+    }
+
+    header {
+      background: linear-gradient(180deg, #1f242b, #171b20);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 16px;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .resource-bar {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(100px, 1fr));
+      gap: 10px;
+      align-items: center;
+    }
+
+    .resource {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      box-shadow: var(--shadow);
+      transition: transform .25s ease, box-shadow .25s ease;
+    }
+
+    .resource.flash { transform: scale(1.04); box-shadow: 0 0 0 2px rgba(255,255,255,.15), var(--shadow); }
+    .cash { color: var(--green); }
+    .heat { color: var(--red); }
+    .influence { color: var(--blue); }
+
+    .heat-gauge {
+      width: 100%;
+      height: 8px;
+      background: #2a2f37;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: 4px;
+    }
+    .heat-fill { height: 100%; background: linear-gradient(90deg, #ffbd66, var(--red)); transition: width .4s ease; }
+    .heat-warning { animation: pulse .6s ease-in-out 4; }
+    @keyframes pulse {
+      0%,100% { box-shadow: 0 0 0 rgba(255,95,109,.0); }
+      50% { box-shadow: 0 0 12px rgba(255,95,109,.7); }
+    }
+
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .city-wrap {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      aspect-ratio: 1 / 1;
+    }
+
+    .block {
+      border: 1px solid #111;
+      border-radius: 8px;
+      padding: 6px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: transform .15s ease, filter .15s ease;
+      min-height: 92px;
+      position: relative;
+    }
+    .block:hover { transform: translateY(-2px); filter: brightness(1.08); }
+    .block .small { font-size: 11px; color: #d9dee4; opacity: .9; }
+    .block .label { font-weight: 700; font-size: 12px; }
+    .wealth { font-size: 12px; color: var(--yellow); }
+    .control-tag {
+      font-size: 10px;
+      text-transform: uppercase;
+      padding: 2px 5px;
+      border-radius: 4px;
+      align-self: flex-start;
+      background: rgba(0,0,0,.4);
+      border: 1px solid rgba(255,255,255,.2);
+    }
+
+    .t-residential { background: #22543d; }
+    .t-commercial { background: #1f4e79; }
+    .t-industrial { background: #5d4037; }
+    .t-government { background: #4f4a73; }
+    .c-player { outline: 2px solid #78ff9a; }
+    .c-rival { outline: 2px solid #ff7d89; }
+
+    .side {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      display: grid;
+      gap: 12px;
+      align-content: start;
+      max-height: calc(100vh - 140px);
+      overflow: auto;
+    }
+
+    .card { background: var(--panel-2); border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+    h2, h3 { margin: 0 0 8px 0; }
+    h2 { font-size: 18px; }
+    h3 { font-size: 14px; color: #cfd6de; }
+
+    button, select {
+      width: 100%;
+      padding: 8px;
+      border-radius: 7px;
+      border: 1px solid #445061;
+      background: #2a313a;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    button:hover { filter: brightness(1.08); cursor: pointer; }
+    .btn-green { background: #274f35; border-color: #3b7a52; }
+    .btn-red { background: #5b252c; border-color: #8b3a46; }
+    .btn-blue { background: #1f3e63; border-color: #2f5f99; }
+
+    .crew-list { display: grid; gap: 6px; max-height: 160px; overflow: auto; }
+    .crew-item { border: 1px solid #445061; border-radius: 6px; padding: 6px; font-size: 12px; background: #222831; }
+
+    .bottom {
+      padding: 12px 14px 16px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .55);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 50;
+    }
+    .modal.show { display: flex; }
+    .modal-content {
+      width: min(620px, 95vw);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    .modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 10px; }
+
+    .history { font-size: 12px; max-height: 130px; overflow: auto; color: #bcc7d3; }
+    .history div { border-bottom: 1px solid #2f3742; padding: 4px 0; }
+
+    @media (max-width: 980px) {
+      .main { grid-template-columns: 1fr; }
+      .side { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div class="resource-bar">
+        <div class="resource" id="res-cash">Cash: <span class="cash" id="cashVal">$0</span></div>
+        <div class="resource" id="res-influence">Influence: <span class="influence" id="infVal">0</span></div>
+        <div class="resource" id="res-heat">Heat: <span class="heat" id="heatVal">0</span>
+          <div class="heat-gauge"><div class="heat-fill" id="heatFill" style="width:0%"></div></div>
+        </div>
+        <div class="resource" id="res-crew">Crew: <span id="crewVal">0</span>/10</div>
+        <div class="resource" id="res-turn">Turn: <span id="turnVal">1</span>/100</div>
+        <div class="resource" id="res-control">Blocks: <span id="controlVal">0</span>/25</div>
+      </div>
+    </header>
+
+    <main class="main">
+      <section class="city-wrap">
+        <h2>District Grid</h2>
+        <div class="grid" id="districtGrid"></div>
+      </section>
+
+      <aside class="side">
+        <div class="card">
+          <h3>Game Controls</h3>
+          <button class="btn-blue" id="newGameBtn">New Game</button>
+          <button id="saveBtn">Save</button>
+          <button id="loadBtn">Load</button>
+          <button class="btn-red" id="resetBtn">Reset Save</button>
+        </div>
+
+        <div class="card">
+          <h3>Crew Management</h3>
+          <button class="btn-green" id="recruitBtn">Recruit Crew ($1000)</button>
+          <button id="manageCrewBtn">Manage Assignments</button>
+          <div class="crew-list" id="crewList"></div>
+        </div>
+
+        <div class="card">
+          <h3>Business Operations</h3>
+          <button id="buildSpeakeasy">Build Speakeasy ($5000)</button>
+          <button id="buildDen">Build Gambling Den ($8000)</button>
+          <button id="buildWarehouse">Build Warehouse ($12000)</button>
+          <button id="upgradeBusiness">Upgrade Selected Business</button>
+          <div style="font-size:12px;color:#9fb0c2">Select a controlled block to build or upgrade. Requires 2 assigned crew to generate income.</div>
+        </div>
+
+        <div class="card">
+          <h3>Crime Actions</h3>
+          <select id="crimeType">
+            <option value="robbery">Robbery</option>
+            <option value="extortion">Extortion</option>
+            <option value="heist">Heist</option>
+            <option value="bribery">Bribery</option>
+          </select>
+          <select id="crimeCrewCount">
+            <option value="1">1 Crew</option>
+            <option value="2" selected>2 Crew</option>
+            <option value="3">3 Crew</option>
+          </select>
+          <button class="btn-blue" id="crimeBtn">Execute Crime</button>
+          <button class="btn-green" id="endTurnBtn">End Turn</button>
+        </div>
+
+        <div class="card">
+          <h3>Event Log</h3>
+          <div class="history" id="history"></div>
+        </div>
+      </aside>
+    </main>
+
+    <section class="bottom card" style="margin: 0 14px 14px;">
+      <h3>README / Mechanics</h3>
+      <p>In <strong>Syndicate City</strong>, each turn is one day. Build your empire by taking blocks, recruiting crew, running businesses, and performing crimes. Reach <strong>15+ controlled blocks</strong> and <strong>$100,000 cash</strong> before turn 100 to win.</p>
+      <ul>
+        <li>Heat reaches 100 = immediate loss (federal raid).</li>
+        <li>Cash below $0 for 3 turns in a row = loss.</li>
+        <li>Neutral block takeover costs $3000 with base 60% success + influence bonus.</li>
+        <li>Businesses need 2 assigned crew to produce daily income.</li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-content">
+      <h3 id="modalTitle">Notice</h3>
+      <div id="modalBody"></div>
+      <div class="modal-footer">
+        <button id="modalClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const SAVE_KEY = 'syndicate_city_save_v1';
+    const TUTORIAL_KEY = 'syndicate_city_tutorial_seen';
+    const districtTypes = ['residential', 'commercial', 'industrial', 'government'];
+    const businessData = {
+      speakeasy: { cost: 5000, income: 500, label: 'Speakeasy' },
+      den: { cost: 8000, income: 800, label: 'Gambling Den' },
+      warehouse: { cost: 12000, income: 1200, label: 'Smuggling Warehouse' }
+    };
+    const crimeData = {
+      robbery: { base: 50, stat: 'stealth', mult: 2, heat: 10, min: 2000, max: 5000 },
+      extortion: { base: 40, stat: 'combat', mult: 3, heat: 15, min: 3000, max: 8000 },
+      heist: { base: 30, stat: 'intelligence', mult: 4, heat: 30, min: 10000, max: 25000 },
+      bribery: { base: 70, stat: 'intelligence', mult: 2, heat: -25, min: 0, max: 0, cost: 5000 }
+    };
+
+    let gameState = null;
+    let selectedBlockId = null;
+
+    const el = (id) => document.getElementById(id);
+
+    /** Utility random integer in range. */
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    /** Main state initializer for a new game. */
+    function createInitialState() {
+      return {
+        turn: 1,
+        cash: 10000,
+        influence: 0,
+        heat: 0,
+        crew: Array.from({ length: 3 }, (_, i) => makeCrew(`Starter-${i + 1}`)),
+        districts: generateDistricts(),
+        log: ['Welcome to Syndicate City. Build your network and survive.'],
+        inactiveTurns: 0,
+        debtTurns: 0,
+        gameOver: false,
+        result: null
+      };
+    }
+
+    /** Generates one crew member with random stats. */
+    function makeCrew(name = `Crew-${Date.now().toString().slice(-4)}`) {
+      return {
+        id: crypto.randomUUID(),
+        name,
+        combat: rand(1, 10),
+        stealth: rand(1, 10),
+        intelligence: rand(1, 10),
+        loyalty: rand(1, 100),
+        assignment: null,
+        available: true
+      };
+    }
+
+    /** Procedurally creates a 5x5 district map. */
+    function generateDistricts() {
+      const blocks = [];
+      for (let i = 0; i < 25; i++) {
+        const controlRoll = Math.random();
+        const control = controlRoll < 0.12 ? 'player' : controlRoll < 0.28 ? 'rival' : 'neutral';
+        blocks.push({
+          id: i,
+          type: districtTypes[rand(0, districtTypes.length - 1)],
+          wealth: rand(1, 5),
+          control,
+          business: null
+        });
+      }
+      if (!blocks.some(b => b.control === 'player')) blocks[rand(0, 24)].control = 'player';
+      return blocks;
+    }
+
+    /** Renders resources, map, crew, and log. */
+    function renderAll() {
+      el('cashVal').textContent = `$${gameState.cash.toLocaleString()}`;
+      el('infVal').textContent = gameState.influence;
+      el('heatVal').textContent = gameState.heat;
+      el('crewVal').textContent = gameState.crew.length;
+      el('turnVal').textContent = gameState.turn;
+      el('controlVal').textContent = controlledBlocks().length;
+      el('heatFill').style.width = `${Math.min(100, Math.max(0, gameState.heat))}%`;
+      if (gameState.heat >= 80) el('res-heat').classList.add('heat-warning');
+      else el('res-heat').classList.remove('heat-warning');
+      renderGrid();
+      renderCrew();
+      renderLog();
+      flashOnChange();
+    }
+
+    function flashOnChange() {
+      ['res-cash', 'res-influence', 'res-heat', 'res-crew'].forEach(id => {
+        const node = el(id);
+        node.classList.remove('flash');
+        requestAnimationFrame(() => node.classList.add('flash'));
+        setTimeout(() => node.classList.remove('flash'), 320);
+      });
+    }
+
+    /** Draw district blocks with type, control, and business status. */
+    function renderGrid() {
+      const grid = el('districtGrid');
+      grid.innerHTML = '';
+      gameState.districts.forEach(block => {
+        const node = document.createElement('div');
+        node.className = `block t-${block.type} c-${block.control}`;
+        if (selectedBlockId === block.id) node.style.boxShadow = '0 0 0 3px #f4cd66 inset';
+        node.innerHTML = `
+          <div>
+            <div class="label">${block.type[0].toUpperCase() + block.type.slice(1)}</div>
+            <div class="small">Block #${block.id + 1}</div>
+          </div>
+          <div class="wealth">Wealth: ${'★'.repeat(block.wealth)}</div>
+          <div class="control-tag">${block.control}</div>
+          <div class="small">${block.business ? `${businessData[block.business.type].label}${block.business.upgraded ? ' (UP)' : ''}` : 'No business'}</div>
+        `;
+        node.onclick = () => onBlockClick(block.id);
+        grid.appendChild(node);
+      });
+    }
+
+    /** Draw crew roster panel. */
+    function renderCrew() {
+      const crewList = el('crewList');
+      crewList.innerHTML = '';
+      gameState.crew.forEach(member => {
+        const div = document.createElement('div');
+        div.className = 'crew-item';
+        div.innerHTML = `<strong>${member.name}</strong> C:${member.combat} S:${member.stealth} I:${member.intelligence} L:${member.loyalty} <br/>Assigned: ${member.assignment ?? 'None'}`;
+        crewList.appendChild(div);
+      });
+    }
+
+    function renderLog() {
+      const history = el('history');
+      history.innerHTML = gameState.log.slice(-20).reverse().map(item => `<div>${item}</div>`).join('');
+    }
+
+    function addLog(text) { gameState.log.push(`[T${gameState.turn}] ${text}`); }
+
+    function showModal(title, body) {
+      el('modalTitle').textContent = title;
+      el('modalBody').innerHTML = body;
+      el('modal').classList.add('show');
+    }
+
+    function hideModal() { el('modal').classList.remove('show'); }
+
+    function controlledBlocks() { return gameState.districts.filter(b => b.control === 'player'); }
+
+    /** Clicking block: select block and optionally attempt takeover. */
+    function onBlockClick(id) {
+      const block = gameState.districts.find(b => b.id === id);
+      selectedBlockId = id;
+      if (block.control === 'neutral') {
+        if (gameState.cash < 3000) {
+          addLog('Not enough cash for takeover attempt.');
+          renderAll();
+          return;
+        }
+        const ok = confirm('Attempt takeover for $3000?');
+        if (ok) {
+          gameState.cash -= 3000;
+          const chance = Math.min(95, 60 + Math.floor(gameState.influence / 5));
+          if (rand(1, 100) <= chance) {
+            block.control = 'player';
+            gameState.influence += 2;
+            addLog(`Takeover succeeded on block ${id + 1}.`);
+          } else {
+            gameState.influence = Math.max(0, gameState.influence - 1);
+            addLog(`Takeover failed on block ${id + 1}.`);
+          }
+        }
+      }
+      renderAll();
+    }
+
+    /** Recruit a new crew member if slots/cash allow. */
+    function recruitCrew() {
+      if (gameState.crew.length >= 10) return showModal('Crew Full', 'Maximum crew size reached (10).');
+      if (gameState.cash < 1000) return showModal('Insufficient Cash', 'Need $1000 to recruit.');
+      gameState.cash -= 1000;
+      const recruit = makeCrew();
+      gameState.crew.push(recruit);
+      gameState.influence += 1;
+      addLog(`Recruited ${recruit.name}.`);
+      renderAll();
+    }
+
+    /** Open assignment interface and commit crew assignments to businesses. */
+    function manageAssignments() {
+      const options = controlledBlocks().filter(b => b.business).map(b => `<option value="${b.id}">${b.id + 1} - ${businessData[b.business.type].label}</option>`).join('');
+      if (!options) return showModal('No Businesses', 'Build a business first on a controlled block.');
+      const crewOptions = gameState.crew.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      showModal('Crew Management', `
+        <p>Assign a crew member to a business block. Each business needs <strong>2 assigned crew</strong> to produce income.</p>
+        <select id="assignCrew">${crewOptions}</select>
+        <select id="assignBlock">${options}</select>
+        <button id="assignBtn" class="btn-blue">Assign</button>
+      `);
+      setTimeout(() => {
+        const btn = el('assignBtn');
+        if (!btn) return;
+        btn.onclick = () => {
+          const crewId = el('assignCrew').value;
+          const blockId = Number(el('assignBlock').value);
+          const member = gameState.crew.find(c => c.id === crewId);
+          const block = gameState.districts.find(b => b.id === blockId);
+          member.assignment = `Block ${block.id + 1}`;
+          member.available = false;
+          addLog(`${member.name} assigned to block ${block.id + 1}.`);
+          hideModal();
+          renderAll();
+        };
+      }, 20);
+    }
+
+    /** Build a business on selected controlled block if valid. */
+    function buildBusiness(type) {
+      const block = gameState.districts.find(b => b.id === selectedBlockId);
+      if (!block) return showModal('No Block Selected', 'Select a controlled block first.');
+      if (block.control !== 'player') return showModal('Invalid Block', 'Can only build on controlled blocks.');
+      if (block.business) return showModal('Already Built', 'This block already has a business.');
+      const price = businessData[type].cost;
+      if (gameState.cash < price) return showModal('Insufficient Cash', `Need $${price.toLocaleString()}.`);
+      gameState.cash -= price;
+      block.business = { type, upgraded: false };
+      addLog(`Built ${businessData[type].label} on block ${block.id + 1}.`);
+      renderAll();
+    }
+
+    function upgradeSelectedBusiness() {
+      const block = gameState.districts.find(b => b.id === selectedBlockId);
+      if (!block || !block.business) return showModal('No Business', 'Select a block with your business.');
+      if (block.business.upgraded) return showModal('Max Upgrade', 'Business already upgraded.');
+      const cost = businessData[block.business.type].cost * 2;
+      if (gameState.cash < cost) return showModal('Insufficient Cash', `Need $${cost.toLocaleString()} to upgrade.`);
+      gameState.cash -= cost;
+      block.business.upgraded = true;
+      addLog(`Upgraded business on block ${block.id + 1}.`);
+      renderAll();
+    }
+
+    function getAvailableCrew(count) {
+      const available = gameState.crew.filter(c => c.loyalty > 15).slice(0, count);
+      return available.length ? available : [];
+    }
+
+    /** Execute selected crime and process outcome/penalties. */
+    function runCrime() {
+      const type = el('crimeType').value;
+      const crewCount = Number(el('crimeCrewCount').value);
+      const selectedCrew = getAvailableCrew(crewCount);
+      if (selectedCrew.length < crewCount) return showModal('Not Enough Crew', 'Need more available crew to run this action.');
+      const cfg = crimeData[type];
+      if (type === 'bribery' && gameState.cash < cfg.cost) return showModal('Insufficient Cash', 'Bribery costs $5000.');
+      if (type === 'bribery') gameState.cash -= cfg.cost;
+      const avgStat = Math.round(selectedCrew.reduce((sum, c) => sum + c[cfg.stat], 0) / selectedCrew.length);
+      const chance = Math.min(95, cfg.base + avgStat * cfg.mult);
+      const success = rand(1, 100) <= chance;
+      if (success) {
+        if (type === 'bribery') {
+          gameState.heat = Math.max(0, gameState.heat + cfg.heat);
+          addLog(`Bribery succeeded. Heat reduced by 25.`);
+        } else {
+          const gain = rand(cfg.min, cfg.max);
+          gameState.cash += gain;
+          gameState.heat = Math.min(100, gameState.heat + cfg.heat);
+          gameState.influence += 1;
+          addLog(`${type} succeeded at ${chance}% odds. Gained $${gain.toLocaleString()}.`);
+        }
+      } else {
+        const failRoll = rand(1, 3);
+        if (failRoll === 1) {
+          const loss = Math.max(0, Math.floor(gameState.cash * 0.2));
+          gameState.cash -= loss;
+          addLog(`${type} failed: Lost $${loss.toLocaleString()} in chaos.`);
+        } else if (failRoll === 2) {
+          gameState.heat = Math.min(100, gameState.heat + 10);
+          addLog(`${type} failed: Heat increased by 10.`);
+        } else {
+          const arrested = selectedCrew[rand(0, selectedCrew.length - 1)];
+          gameState.crew = gameState.crew.filter(c => c.id !== arrested.id);
+          addLog(`${type} failed: ${arrested.name} was arrested.`);
+        }
+      }
+      gameState.inactiveTurns = 0;
+      renderAll();
+      showModal('Crime Result', `${type.toUpperCase()} attempted with ${selectedCrew.length} crew.<br/>Success chance: ${chance}%`);
+    }
+
+    /** Income, passive effects, rival AI, checks for win/loss; then advance turn. */
+    function endTurn() {
+      if (gameState.gameOver) return;
+      let income = controlledBlocks().length * 200;
+
+      gameState.districts.forEach(block => {
+        if (block.control !== 'player' || !block.business) return;
+        const assignedCount = gameState.crew.filter(c => c.assignment === `Block ${block.id + 1}`).length;
+        if (assignedCount >= 2) {
+          const base = businessData[block.business.type].income;
+          income += block.business.upgraded ? base * 2 : base;
+        }
+      });
+
+      gameState.cash += income;
+      if (income <= controlledBlocks().length * 200) {
+        gameState.inactiveTurns += 1;
+        gameState.heat = Math.max(0, gameState.heat - 5);
+      }
+
+      if (gameState.turn % 10 === 0) rivalTakeoverAttempt();
+      if (gameState.cash < 0) gameState.debtTurns += 1;
+      else gameState.debtTurns = 0;
+
+      addLog(`Turn ended. Collected $${income.toLocaleString()} income.`);
+      gameState.turn += 1;
+      saveGame();
+      checkWinLose();
+      renderAll();
+    }
+
+    /** Rival gang attempts to seize one player block every 10 turns. */
+    function rivalTakeoverAttempt() {
+      const playerBlocks = controlledBlocks();
+      if (!playerBlocks.length) return;
+      const target = playerBlocks[rand(0, playerBlocks.length - 1)];
+      const defenders = gameState.crew.filter(c => c.assignment === `Block ${target.id + 1}`);
+      const avgCombat = defenders.length ? defenders.reduce((s, c) => s + c.combat, 0) / defenders.length : 3;
+      const defendChance = Math.min(90, 35 + avgCombat * 8);
+      if (rand(1, 100) > defendChance) {
+        target.control = 'rival';
+        addLog(`Rivals seized block ${target.id + 1}!`);
+      } else {
+        addLog(`Defended block ${target.id + 1} from rivals.`);
+      }
+    }
+
+    /** Evaluate game end states and trigger result modal. */
+    function checkWinLose() {
+      const owns = controlledBlocks().length;
+      if (gameState.heat >= 100) return finishGame('lose', 'Heat hit 100. Federal raid ended your empire.');
+      if (gameState.debtTurns >= 3) return finishGame('lose', 'Bankrupt for 3 turns. Your operation collapsed.');
+      if (gameState.turn > 100) return finishGame('lose', 'Turn limit reached. The city moved on without you.');
+      if (owns >= 15 && gameState.cash >= 100000) return finishGame('win', 'You dominate Syndicate City. Victory!');
+    }
+
+    function finishGame(result, reason) {
+      gameState.gameOver = true;
+      gameState.result = result;
+      addLog(reason);
+      showModal(result === 'win' ? 'Victory' : 'Game Over', reason);
+      renderAll();
+    }
+
+    /** Save/load/reset wrappers around localStorage. */
+    function saveGame() {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+      addLog('Game saved.');
+    }
+
+    function loadGame() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return showModal('No Save', 'No save file found.');
+      gameState = JSON.parse(raw);
+      addLog('Game loaded from local storage.');
+      renderAll();
+    }
+
+    function resetSave() {
+      localStorage.removeItem(SAVE_KEY);
+      showModal('Reset Complete', 'Saved game removed.');
+    }
+
+    function maybeShowTutorial() {
+      if (localStorage.getItem(TUTORIAL_KEY)) return;
+      showModal('Welcome to Syndicate City', `
+        <p><strong>Quick Tutorial</strong></p>
+        <ul>
+          <li>Click neutral blocks to attempt takeover (costs $3000).</li>
+          <li>Select your blocks and build businesses for passive income.</li>
+          <li>Recruit up to 10 crew and assign 2+ crew to each business.</li>
+          <li>Use crimes to earn bursts of cash, but watch Heat.</li>
+          <li>Click End Turn to advance a day and auto-save.</li>
+        </ul>
+      `);
+      localStorage.setItem(TUTORIAL_KEY, '1');
+    }
+
+    function bindEvents() {
+      el('modalClose').onclick = hideModal;
+      el('newGameBtn').onclick = () => { gameState = createInitialState(); addLog('New game started.'); renderAll(); };
+      el('saveBtn').onclick = () => { saveGame(); renderAll(); };
+      el('loadBtn').onclick = loadGame;
+      el('resetBtn').onclick = resetSave;
+      el('recruitBtn').onclick = recruitCrew;
+      el('manageCrewBtn').onclick = manageAssignments;
+      el('buildSpeakeasy').onclick = () => buildBusiness('speakeasy');
+      el('buildDen').onclick = () => buildBusiness('den');
+      el('buildWarehouse').onclick = () => buildBusiness('warehouse');
+      el('upgradeBusiness').onclick = upgradeSelectedBusiness;
+      el('crimeBtn').onclick = runCrime;
+      el('endTurnBtn').onclick = endTurn;
+    }
+
+    /** Bootstraps app state and initial render. */
+    function init() {
+      gameState = createInitialState();
+      bindEvents();
+      renderAll();
+      maybeShowTutorial();
+      saveGame();
+    }
+
+    init();
+  </script>
+</body>
+</html>
