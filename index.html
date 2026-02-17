@@ -124,6 +124,30 @@
       overflow: hidden;
       transition: transform .16s ease, filter .2s ease, box-shadow .2s ease;
     }
+    .illustration {
+      height: 48px;
+      border-radius: 8px;
+      margin: 4px 0;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 5px 10px rgba(0,0,0,.25);
+      background-size: cover;
+      background-position: center;
+    }
+    .workers {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      min-height: 14px;
+      flex-wrap: wrap;
+    }
+    .worker-icon {
+      width: 11px;
+      height: 11px;
+      color: #9ed9ff;
+      filter: drop-shadow(0 0 4px rgba(158,217,255,.6));
+      opacity: .9;
+    }
     .block:before {
       content: "";
       position: absolute; inset: 0;
@@ -167,6 +191,7 @@
 
     .crew-list { display: grid; gap: 7px; max-height: 200px; overflow: auto; }
     .crew-item { padding: 7px; font-size: 12px; border: 1px solid rgba(136, 166, 191, .3); border-radius: 8px; background: rgba(20,31,41,.78); }
+    .crew-item .human { width: 12px; height: 12px; margin-right: 4px; color: #9dd8ff; }
 
     .history { max-height: 130px; overflow: auto; font-size: 12px; color: #bbcad8; }
     .history div { border-bottom: 1px solid rgba(123, 143, 161, .2); padding: 4px 0; }
@@ -230,6 +255,7 @@
     <symbol id="i-inf" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L1 21h22M12 6l6.53 12h-13z"/></symbol>
     <symbol id="i-crew" viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.79 2.99-4S17.66 3 16 3s-3 1.79-3 4 1.34 4 3 4m-8 0c1.66 0 3-1.79 3-4S9.66 3 8 3 5 4.79 5 7s1.34 4 3 4m0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13m8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V20h7v-3.5c0-2.33-4.67-3.5-7-3.5"/></symbol>
     <symbol id="i-turn" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6a6 6 0 0 1-6 6c-2.22 0-4.16-1.21-5.19-3H4.58C5.82 18.53 8.67 21 12 21a9 9 0 0 0 0-18"/></symbol>
+    <symbol id="i-worker" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9m0 2c-5.05 0-9 2.26-9 5v2h18v-2c0-2.74-3.95-5-9-5"/></symbol>
   </svg>
 
   <div class="app">
@@ -348,6 +374,61 @@
     const el = (id) => document.getElementById(id);
     const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 
+    /** Builds rich inline SVG illustrations for district/building visuals. */
+    function blockIllustration(type, business) {
+      const scene = business ? `business-${business.type}` : type;
+      const maps = {
+        residential: {
+          sky: '#4f8bb7', roof: '#b56f53', wall: '#d7d0c4', accent: '#88c98b', detail: '#f3e9c8', road: '#373f4a', glow: '#f7d68a'
+        },
+        commercial: {
+          sky: '#355f9f', roof: '#4f6ea9', wall: '#89b7dd', accent: '#c8f2ff', detail: '#f5d8a0', road: '#2a3443', glow: '#9ee8ff'
+        },
+        industrial: {
+          sky: '#5d5f67', roof: '#674f42', wall: '#90806e', accent: '#cf9157', detail: '#f0cf88', road: '#323235', glow: '#ffb574'
+        },
+        government: {
+          sky: '#4c5f90', roof: '#b2c4db', wall: '#dde5f0', accent: '#6d8dcb', detail: '#f8f2d6', road: '#2f3a4f', glow: '#d6e8ff'
+        },
+        'business-speakeasy': {
+          sky: '#4e3a53', roof: '#3d2537', wall: '#915d78', accent: '#f35f9b', detail: '#ffe0a6', road: '#2f2532', glow: '#ff7db5'
+        },
+        'business-den': {
+          sky: '#355343', roof: '#284436', wall: '#4d8262', accent: '#6de4a4', detail: '#f1f3a7', road: '#22332d', glow: '#89ffc2'
+        },
+        'business-warehouse': {
+          sky: '#4f4b57', roof: '#46414e', wall: '#7e8091', accent: '#9fa8ff', detail: '#ffe7ab', road: '#272834', glow: '#b7bfff'
+        }
+      };
+      const p = maps[scene] || maps[type] || maps.residential;
+      const label = business ? businessData[business.type].label : `${type[0].toUpperCase() + type.slice(1)} Block`;
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 80'>
+        <defs>
+          <linearGradient id='g1' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${p.sky}'/><stop offset='1' stop-color='#1a2533'/></linearGradient>
+          <linearGradient id='g2' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${p.wall}'/><stop offset='1' stop-color='${p.roof}'/></linearGradient>
+          <pattern id='grain' width='6' height='6' patternUnits='userSpaceOnUse'>
+            <circle cx='1' cy='2' r='0.7' fill='rgba(255,255,255,.12)'/>
+            <circle cx='5' cy='4' r='0.6' fill='rgba(0,0,0,.2)'/>
+          </pattern>
+        </defs>
+        <rect width='190' height='80' fill='url(#g1)'/>
+        <rect y='58' width='190' height='22' fill='${p.road}'/>
+        <rect x='28' y='24' width='46' height='35' rx='3' fill='url(#g2)'/>
+        <rect x='82' y='18' width='42' height='41' rx='3' fill='url(#g2)'/>
+        <rect x='130' y='27' width='34' height='32' rx='3' fill='url(#g2)'/>
+        <rect x='28' y='24' width='46' height='35' rx='3' fill='url(#grain)'/>
+        <rect x='82' y='18' width='42' height='41' rx='3' fill='url(#grain)'/>
+        <rect x='130' y='27' width='34' height='32' rx='3' fill='url(#grain)'/>
+        <rect x='35' y='31' width='8' height='8' fill='${p.detail}'/><rect x='47' y='31' width='8' height='8' fill='${p.detail}'/>
+        <rect x='90' y='25' width='9' height='8' fill='${p.detail}'/><rect x='102' y='25' width='9' height='8' fill='${p.detail}'/>
+        <rect x='136' y='34' width='8' height='8' fill='${p.detail}'/><rect x='147' y='34' width='8' height='8' fill='${p.detail}'/>
+        <circle cx='20' cy='50' r='7' fill='${p.accent}'/><circle cx='170' cy='53' r='6' fill='${p.accent}'/>
+        <rect x='6' y='7' width='84' height='13' rx='6' fill='rgba(0,0,0,.28)'/>
+        <text x='48' y='16' text-anchor='middle' font-size='8' font-family='Arial' fill='${p.glow}'>${label}</text>
+      </svg>`;
+      return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+    }
+
     /** Initializes a new game state. */
     function createInitialState() {
       return {
@@ -424,10 +505,14 @@
       gameState.districts.forEach(block => {
         const div = document.createElement('div');
         div.className = `block t-${block.type} c-${block.control} ${selectedBlockId === block.id ? 'selected' : ''}`;
+        const assignedWorkers = gameState.crew.filter(c => c.assignment === `Block ${block.id + 1}`).length;
+        const workerIcons = Array.from({ length: Math.min(5, assignedWorkers) }, () => `<svg class="worker-icon" viewBox="0 0 24 24"><use href="#i-worker"/></svg>`).join('');
         div.innerHTML = `
           <div><strong>${block.type[0].toUpperCase() + block.type.slice(1)}</strong><div class="tiny">Block #${block.id + 1}</div></div>
+          <div class="illustration" style="background-image:${blockIllustration(block.type, block.business)}"></div>
           <div class="stars">${'★'.repeat(block.wealth)}</div>
           <div class="tag">${block.control}</div>
+          <div class="workers">${workerIcons || '<span class="tiny">No workers</span>'}</div>
           <div class="tiny">${block.business ? `${businessData[block.business.type].label}${block.business.upgraded ? ' • UP' : ''}` : 'No business'}</div>
         `;
         div.onclick = () => onBlockClick(block.id);
@@ -442,7 +527,7 @@
       gameState.crew.forEach(c => {
         const item = document.createElement('div');
         item.className = 'crew-item';
-        item.innerHTML = `<strong>${c.name}</strong><br/>C:${c.combat} S:${c.stealth} I:${c.intelligence} L:${c.loyalty}<br/>Assigned: ${c.assignment || 'None'}`;
+        item.innerHTML = `<strong><svg class="human" viewBox="0 0 24 24"><use href="#i-worker"/></svg>${c.name}</strong><br/>C:${c.combat} S:${c.stealth} I:${c.intelligence} L:${c.loyalty}<br/>Assigned: ${c.assignment || 'None'}`;
         list.appendChild(item);
       });
     }
