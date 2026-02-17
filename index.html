@@ -329,13 +329,34 @@
     </main>
 
     <section class="panel readme">
-      <h3>README / How to Play</h3>
+      <h3>README / Master Guide: Gameplay, Flow, and Winning Styles</h3>
+      <p><strong>Core Loop:</strong> Every turn is one day, and every 7 turns is a full week rhythm. Your objective is to build criminal momentum without triggering collapse. You win by controlling at least 15 blocks and reaching $100,000 before turn 100. You lose if Heat reaches 100 (federal raid) or if cash remains below $0 for 3 straight turns.</p>
+      <p><strong>Map & Control:</strong> The city is a 5x5 tactical grid. Each block has district type (residential/commercial/industrial/government), wealth stars, and ownership state (player/neutral/rival). Higher control means stronger passive income and safer scaling. Neutral takeovers cost $3000 and roll success at 60% + influence bonus.</p>
+      <p><strong>Economy & Risk:</strong> Money comes from controlled blocks (+$200 each) and businesses. Speakeasy, Gambling Den, and Smuggling Warehouse produce large daily profit when at least 2 crew are assigned. Crimes add burst income but also risk: failure can remove crew, spike heat, or drain cash.</p>
+      <p><strong>Crew Doctrine:</strong> Crew stats define operation strength. Combat helps extortion and defense, stealth powers robbery, intelligence powers heists/bribery, loyalty filters reliability. Keep a reserve crew unassigned so you can still execute crimes while businesses keep printing cash.</p>
+
+      <h4>Initial 10-Turn Plan (Recommended)</h4>
+      <ol>
+        <li><strong>Turn 1-2:</strong> Secure one nearby neutral block, recruit one crew if cash permits, and avoid high-heat crimes early.</li>
+        <li><strong>Turn 3-5:</strong> Build first Speakeasy on safe controlled block and assign 2 crew immediately to start passive income.</li>
+        <li><strong>Turn 6-8:</strong> Expand to 4-6 controlled blocks; use robbery/extortion selectively for liquidity spikes.</li>
+        <li><strong>Turn 9-10:</strong> Prepare for rival pressure cycle (every 10 turns) by assigning combat-oriented defenders.</li>
+      </ol>
+
+      <h4>Four Winning Strategies</h4>
+      <ol>
+        <li><strong>1) Quiet Expansion (Low-Heat Macro):</strong> Prioritize takeovers + business income, commit crimes rarely, and keep heat low via inactive turns. This is the most stable route for consistent wins.</li>
+        <li><strong>2) Balanced Syndicate (Hybrid):</strong> Mix passive income with targeted crimes. Run robbery/extortion when cash dips, then pause to bleed heat. Best for adaptable players.</li>
+        <li><strong>3) Intelligence Cartel (Heist + Bribery Cycle):</strong> Recruit high-intelligence crew, run high-value heists, then immediately bribe to reset heat. High skill ceiling, high snowball potential.</li>
+        <li><strong>4) Territory Fortress (Control First):</strong> Rush 15+ blocks early, defend with combat crews, and rely on map control income. Slower cash spike but strong board dominance and safer endgame.</li>
+      </ol>
+
+      <h4>Late-Game Closing Checklist</h4>
       <ul>
-        <li>Each turn = one day. 7 days make a week.</li>
-        <li>Win by controlling 15+ blocks and reaching $100,000 before turn 100.</li>
-        <li>Lose if Heat reaches 100, or if cash stays below $0 for 3 turns.</li>
-        <li>Neutral takeover costs $3000. Success = 60% + influence bonus.</li>
-        <li>Heat drops by 5 when you end a quiet turn (no active crime).</li>
+        <li>Hold 15+ blocks with at least 2 defended frontier blocks.</li>
+        <li>Keep heat under 75 so unlucky failures don't instantly end your run.</li>
+        <li>Upgrade your strongest businesses to 2x output before turn 80.</li>
+        <li>Preserve 1-2 unassigned flexible crew for emergencies.</li>
       </ul>
     </section>
   </div>
@@ -402,6 +423,22 @@
       };
       const p = maps[scene] || maps[type] || maps.residential;
       const label = business ? businessData[business.type].label : `${type[0].toUpperCase() + type.slice(1)} Block`;
+      const profile = {
+        residential: `<polygon points='20,60 42,34 64,60' fill='${p.roof}'/><rect x='25' y='40' width='35' height='20' rx='3' fill='${p.wall}'/>`,
+        commercial: `<rect x='20' y='30' width='45' height='30' rx='2' fill='${p.wall}'/><rect x='24' y='36' width='37' height='8' fill='${p.detail}'/><rect x='24' y='48' width='37' height='8' fill='${p.detail}'/>`,
+        industrial: `<rect x='20' y='36' width='48' height='24' rx='2' fill='${p.wall}'/><rect x='26' y='24' width='8' height='12' fill='${p.roof}'/><rect x='38' y='21' width='7' height='15' fill='${p.roof}'/>`,
+        government: `<polygon points='20,40 43,28 66,40' fill='${p.roof}'/><rect x='22' y='40' width='42' height='20' rx='2' fill='${p.wall}'/><rect x='40' y='43' width='6' height='17' fill='${p.accent}'/>`,
+        'business-speakeasy': `<rect x='18' y='35' width='50' height='25' rx='3' fill='${p.wall}'/><rect x='24' y='41' width='38' height='8' fill='${p.glow}'/><text x='43' y='56' text-anchor='middle' font-size='7' fill='${p.detail}'>JAZZ</text>`,
+        'business-den': `<rect x='18' y='34' width='50' height='26' rx='3' fill='${p.wall}'/><circle cx='30' cy='47' r='4' fill='${p.glow}'/><circle cx='42' cy='47' r='4' fill='${p.glow}'/><circle cx='54' cy='47' r='4' fill='${p.glow}'/>`,
+        'business-warehouse': `<rect x='18' y='36' width='52' height='24' rx='2' fill='${p.wall}'/><rect x='22' y='24' width='10' height='12' fill='${p.roof}'/><rect x='44' y='24' width='10' height='12' fill='${p.roof}'/>`
+      };
+      const leftShape = profile[scene] || profile[type] || profile.residential;
+      const centerShape = business
+        ? `<rect x='80' y='17' width='46' height='43' rx='4' fill='${p.wall}'/><rect x='87' y='24' width='32' height='9' fill='${p.glow}'/><rect x='87' y='38' width='32' height='16' fill='${p.detail}'/>`
+        : `<rect x='82' y='18' width='42' height='41' rx='3' fill='url(#g2)'/>`;
+      const rightShape = business
+        ? `<rect x='132' y='30' width='34' height='30' rx='3' fill='${p.roof}'/><rect x='137' y='36' width='24' height='8' fill='${p.detail}'/>`
+        : `<rect x='130' y='27' width='34' height='32' rx='3' fill='url(#g2)'/>`;
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 80'>
         <defs>
           <linearGradient id='g1' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${p.sky}'/><stop offset='1' stop-color='#1a2533'/></linearGradient>
@@ -413,15 +450,13 @@
         </defs>
         <rect width='190' height='80' fill='url(#g1)'/>
         <rect y='58' width='190' height='22' fill='${p.road}'/>
-        <rect x='28' y='24' width='46' height='35' rx='3' fill='url(#g2)'/>
-        <rect x='82' y='18' width='42' height='41' rx='3' fill='url(#g2)'/>
-        <rect x='130' y='27' width='34' height='32' rx='3' fill='url(#g2)'/>
-        <rect x='28' y='24' width='46' height='35' rx='3' fill='url(#grain)'/>
-        <rect x='82' y='18' width='42' height='41' rx='3' fill='url(#grain)'/>
-        <rect x='130' y='27' width='34' height='32' rx='3' fill='url(#grain)'/>
-        <rect x='35' y='31' width='8' height='8' fill='${p.detail}'/><rect x='47' y='31' width='8' height='8' fill='${p.detail}'/>
-        <rect x='90' y='25' width='9' height='8' fill='${p.detail}'/><rect x='102' y='25' width='9' height='8' fill='${p.detail}'/>
-        <rect x='136' y='34' width='8' height='8' fill='${p.detail}'/><rect x='147' y='34' width='8' height='8' fill='${p.detail}'/>
+        ${leftShape}
+        ${centerShape}
+        ${rightShape}
+        <rect x='16' y='20' width='54' height='42' rx='4' fill='url(#grain)' opacity='.45'/>
+        <rect x='80' y='16' width='46' height='46' rx='4' fill='url(#grain)' opacity='.45'/>
+        <rect x='130' y='24' width='38' height='38' rx='4' fill='url(#grain)' opacity='.45'/>
+        <rect x='76' y='58' width='38' height='2' fill='rgba(255,255,255,.25)'/>
         <circle cx='20' cy='50' r='7' fill='${p.accent}'/><circle cx='170' cy='53' r='6' fill='${p.accent}'/>
         <rect x='6' y='7' width='84' height='13' rx='6' fill='rgba(0,0,0,.28)'/>
         <text x='48' y='16' text-anchor='middle' font-size='8' font-family='Arial' fill='${p.glow}'>${label}</text>
