@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Syndicate City</title>
+  <style>
+    :root {
+      --bg-1: #0b1218;
+      --bg-2: #131c25;
+      --panel: rgba(18, 28, 38, 0.78);
+      --panel-2: rgba(23, 36, 48, 0.88);
+      --edge: rgba(122, 153, 173, 0.22);
+      --txt: #e2ecf5;
+      --muted: #94a6b7;
+      --cash: #63f49f;
+      --heat: #ff697d;
+      --inf: #70b7ff;
+      --warn: #ffc86d;
+      --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      color: var(--txt);
+      font-family: "Inter", "Segoe UI", Roboto, system-ui, sans-serif;
+      min-width: 800px;
+      background:
+        radial-gradient(1100px 650px at 5% 0%, rgba(111, 188, 255, 0.09), transparent 65%),
+        radial-gradient(900px 700px at 100% 100%, rgba(97, 244, 159, 0.08), transparent 65%),
+        linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      overflow-x: hidden;
+    }
+
+    .fog {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(152, 202, 242, 0.08), transparent 30%),
+        radial-gradient(circle at 80% 60%, rgba(170, 246, 207, 0.08), transparent 35%);
+      filter: blur(24px);
+      animation: drift 16s ease-in-out infinite alternate;
+    }
+    @keyframes drift { from { transform: translateY(-8px); } to { transform: translateY(10px); } }
+
+    .app { position: relative; z-index: 1; display: grid; grid-template-rows: auto 1fr auto; min-height: 100vh; }
+
+    header {
+      position: sticky; top: 0; z-index: 20;
+      backdrop-filter: blur(10px) saturate(120%);
+      background: rgba(12, 18, 25, 0.82);
+      border-bottom: 1px solid var(--edge);
+      box-shadow: var(--shadow);
+      padding: 10px 14px;
+    }
+
+    .resource-bar { display: grid; grid-template-columns: repeat(7, minmax(110px, 1fr)); gap: 10px; }
+    .res {
+      background: linear-gradient(155deg, rgba(36, 52, 67, 0.82), rgba(18, 28, 38, 0.86));
+      border: 1px solid var(--edge);
+      border-radius: 12px;
+      padding: 8px 10px;
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.08), var(--shadow);
+      transition: transform .22s ease, border-color .25s ease;
+    }
+    .res:hover { transform: translateY(-1px); border-color: rgba(159, 201, 231, .35); }
+    .res-head { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #a9c0d4; }
+    .res strong { font-size: 16px; }
+    .cash { color: var(--cash); } .heat { color: var(--heat); } .inf { color: var(--inf); }
+
+    .pulse { animation: cardPulse .35s ease; }
+    @keyframes cardPulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+
+    .heat-track {
+      margin-top: 4px;
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+    .heat-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #f6db84, #ff8b74 55%, #ff4d70);
+      transition: width .45s ease;
+      box-shadow: 0 0 12px rgba(255, 96, 121, .55);
+    }
+    .heat-danger { animation: heatBlink .7s linear infinite; }
+    @keyframes heatBlink { 50% { filter: brightness(1.25); } }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 320px;
+      gap: 14px;
+      padding: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--edge);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(9px);
+    }
+
+    .city { padding: 12px; }
+    .city h2 { margin: 0 0 10px; font-size: 20px; letter-spacing: .2px; }
+    .sub { color: #8ca2b8; font-size: 12px; margin-bottom: 10px; }
+
+    .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; aspect-ratio: 1 / 1; }
+    .block {
+      position: relative;
+      min-height: 96px;
+      border-radius: 11px;
+      border: 1px solid rgba(255,255,255,.1);
+      padding: 7px;
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform .16s ease, filter .2s ease, box-shadow .2s ease;
+    }
+    .illustration {
+      height: 48px;
+      border-radius: 8px;
+      margin: 4px 0;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 5px 10px rgba(0,0,0,.25);
+      background-size: cover;
+      background-position: center;
+    }
+    .workers {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      min-height: 14px;
+      flex-wrap: wrap;
+    }
+    .worker-icon {
+      width: 11px;
+      height: 11px;
+      color: #9ed9ff;
+      filter: drop-shadow(0 0 4px rgba(158,217,255,.6));
+      opacity: .9;
+    }
+    .block:before {
+      content: "";
+      position: absolute; inset: 0;
+      background: linear-gradient(175deg, rgba(255,255,255,.13), transparent 40%);
+      pointer-events: none;
+    }
+    .block:hover { transform: translateY(-3px); filter: brightness(1.07); box-shadow: 0 8px 14px rgba(0,0,0,.25); }
+    .selected { box-shadow: 0 0 0 2px rgba(255, 213, 124, .95), 0 0 16px rgba(255, 200, 90, .35); }
+
+    .t-residential { background: linear-gradient(145deg, #225445, #1b3c33); }
+    .t-commercial { background: linear-gradient(145deg, #214f81, #17385a); }
+    .t-industrial { background: linear-gradient(145deg, #6a4833, #493224); }
+    .t-government { background: linear-gradient(145deg, #50477b, #35315a); }
+    .c-player { outline: 2px solid rgba(100, 244, 161, .9); }
+    .c-rival { outline: 2px solid rgba(255, 105, 125, .82); }
+
+    .tag { font-size: 10px; text-transform: uppercase; padding: 2px 5px; border-radius: 6px; border: 1px solid rgba(255,255,255,.25); background: rgba(0,0,0,.25); display: inline-block; }
+    .tiny { font-size: 11px; opacity: .92; }
+    .stars { color: #ffd96f; font-size: 12px; }
+
+    .side { padding: 11px; display: grid; gap: 10px; align-content: start; max-height: calc(100vh - 128px); overflow: auto; }
+    details {
+      background: var(--panel-2);
+      border: 1px solid var(--edge);
+      border-radius: 12px;
+      padding: 7px 9px;
+    }
+    details[open] summary { color: #d6e4f2; }
+    summary { cursor: pointer; font-weight: 600; color: #b8cada; margin-bottom: 8px; }
+
+    button, select {
+      width: 100%; border-radius: 9px; border: 1px solid rgba(136, 166, 191, 0.35);
+      background: linear-gradient(180deg, #263846, #1d2c39);
+      color: var(--txt); padding: 9px 8px; margin-bottom: 7px;
+      transition: transform .12s ease, filter .2s ease;
+    }
+    button:hover { filter: brightness(1.1); transform: translateY(-1px); cursor: pointer; }
+    .btn-green { background: linear-gradient(180deg, #24573e, #1c4531); }
+    .btn-blue { background: linear-gradient(180deg, #224d79, #1a3960); }
+    .btn-red { background: linear-gradient(180deg, #6a2d38, #4e2229); }
+
+    .crew-list { display: grid; gap: 7px; max-height: 200px; overflow: auto; }
+    .crew-item { padding: 7px; font-size: 12px; border: 1px solid rgba(136, 166, 191, .3); border-radius: 8px; background: rgba(20,31,41,.78); }
+    .crew-item .human { width: 12px; height: 12px; margin-right: 4px; color: #9dd8ff; }
+
+    .history { max-height: 130px; overflow: auto; font-size: 12px; color: #bbcad8; }
+    .history div { border-bottom: 1px solid rgba(123, 143, 161, .2); padding: 4px 0; }
+
+    .readme { margin: 0 14px 14px; padding: 10px 12px; }
+    .readme h3 { margin: 0 0 7px; }
+    .readme ul { margin-top: 8px; }
+
+    .modal {
+      position: fixed; inset: 0; z-index: 60;
+      display: none; align-items: center; justify-content: center;
+      background: rgba(6, 10, 14, 0.62);
+      backdrop-filter: blur(6px);
+    }
+    .modal.show { display: flex; }
+    .modal-box {
+      width: min(680px, 95vw);
+      padding: 14px;
+      border-radius: 14px;
+      background: linear-gradient(165deg, rgba(29,42,55,.96), rgba(21,31,42,.96));
+      border: 1px solid rgba(142, 178, 202, .3);
+      box-shadow: var(--shadow);
+    }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 8px; margin-top: 8px; }
+
+    .float-msg {
+      position: fixed; right: 18px; bottom: 20px; z-index: 70;
+      background: rgba(23,36,48,.95);
+      border: 1px solid rgba(142, 178, 202, .35);
+      border-left: 4px solid var(--inf);
+      border-radius: 10px; padding: 10px 12px;
+      box-shadow: var(--shadow); opacity: 0; transform: translateY(8px);
+      transition: all .3s ease;
+      max-width: 320px; font-size: 13px;
+    }
+    .float-msg.show { opacity: 1; transform: translateY(0); }
+
+    .particle {
+      position: fixed; width: 6px; height: 6px; border-radius: 50%; pointer-events: none; z-index: 40;
+      animation: pop .9s ease forwards;
+      box-shadow: 0 0 10px currentColor;
+    }
+    @keyframes pop {
+      from { opacity: 1; transform: translate(0,0) scale(1); }
+      to { opacity: 0; transform: translate(var(--x), var(--y)) scale(0); }
+    }
+
+    svg.icon { width: 14px; height: 14px; opacity: .9; }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .side { max-height: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="fog"></div>
+  <svg width="0" height="0" style="position:absolute;">
+    <symbol id="i-cash" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2m1 15.93V20h-2v-2.06c-1.77-.36-3-1.61-3-3.43h2c0 1.1.9 2 2 2s2-.9 2-2-.9-2-2-2c-2.21 0-4-1.79-4-4 0-1.82 1.23-3.07 3-3.43V4h2v2.07c1.77.36 3 1.61 3 3.43h-2c0-1.1-.9-2-2-2s-2 .9-2 2 .9 2 2 2c2.21 0 4 1.79 4 4 0 1.82-1.23 3.07-3 3.43"/></symbol>
+    <symbol id="i-heat" viewBox="0 0 24 24"><path fill="currentColor" d="M13.5 0s.5 3-2 5.5S8 11 8 14a6 6 0 0 0 12 0c0-6-6.5-9-6.5-14M12 22a4 4 0 0 1-4-4c0-2.3 1.5-3.8 3.2-5.5.8 1.1 2.8 2.8 2.8 5.5a2 2 0 0 1-2 2"/></symbol>
+    <symbol id="i-inf" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2L1 21h22M12 6l6.53 12h-13z"/></symbol>
+    <symbol id="i-crew" viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.79 2.99-4S17.66 3 16 3s-3 1.79-3 4 1.34 4 3 4m-8 0c1.66 0 3-1.79 3-4S9.66 3 8 3 5 4.79 5 7s1.34 4 3 4m0 2c-2.33 0-7 1.17-7 3.5V20h14v-3.5C15 14.17 10.33 13 8 13m8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V20h7v-3.5c0-2.33-4.67-3.5-7-3.5"/></symbol>
+    <symbol id="i-turn" viewBox="0 0 24 24"><path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6a6 6 0 0 1-6 6c-2.22 0-4.16-1.21-5.19-3H4.58C5.82 18.53 8.67 21 12 21a9 9 0 0 0 0-18"/></symbol>
+    <symbol id="i-worker" viewBox="0 0 24 24"><path fill="currentColor" d="M12 12a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9m0 2c-5.05 0-9 2.26-9 5v2h18v-2c0-2.74-3.95-5-9-5"/></symbol>
+  </svg>
+
+  <div class="app">
+    <header>
+      <div class="resource-bar">
+        <div class="res" id="r-cash"><div class="res-head"><svg class="icon"><use href="#i-cash"/></svg>Cash</div><strong class="cash" id="cash">$0</strong></div>
+        <div class="res" id="r-inf"><div class="res-head"><svg class="icon"><use href="#i-inf"/></svg>Influence</div><strong class="inf" id="inf">0</strong></div>
+        <div class="res" id="r-heat"><div class="res-head"><svg class="icon"><use href="#i-heat"/></svg>Heat</div><strong class="heat" id="heat">0</strong><div class="heat-track"><div class="heat-fill" id="heatFill"></div></div></div>
+        <div class="res" id="r-crew"><div class="res-head"><svg class="icon"><use href="#i-crew"/></svg>Crew</div><strong id="crew">0/10</strong></div>
+        <div class="res" id="r-turn"><div class="res-head"><svg class="icon"><use href="#i-turn"/></svg>Turn</div><strong id="turn">1/100</strong></div>
+        <div class="res" id="r-control"><div class="res-head">🏙️ Control</div><strong id="control">0/25</strong></div>
+        <div class="res" id="r-week"><div class="res-head">📅 Week Day</div><strong id="weekday">Day 1 / 7</strong></div>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel city">
+        <h2>Syndicate City</h2>
+        <div class="sub">Click a neutral block for takeover • Select controlled block to build or upgrade.</div>
+        <div class="grid" id="grid"></div>
+      </section>
+
+      <aside class="panel side">
+        <details open>
+          <summary>Game Controls</summary>
+          <button class="btn-blue" id="newGameBtn">New Game</button>
+          <button id="saveBtn">Save</button>
+          <button id="loadBtn">Load</button>
+          <button class="btn-red" id="resetBtn">Reset Save</button>
+          <button id="musicBtn">Enable Ambient Music</button>
+        </details>
+
+        <details open>
+          <summary>Crew Management</summary>
+          <button class="btn-green" id="recruitBtn">Recruit Crew ($1000)</button>
+          <button id="assignBtn">Manage Assignments</button>
+          <div class="crew-list" id="crewList"></div>
+        </details>
+
+        <details open>
+          <summary>Business Operations</summary>
+          <button id="b-speakeasy">Build Speakeasy ($5000)</button>
+          <button id="b-den">Build Gambling Den ($8000)</button>
+          <button id="b-warehouse">Build Smuggling Warehouse ($12000)</button>
+          <button id="upgradeBtn">Upgrade Selected Business</button>
+          <div class="tiny">Business income needs 2 crew assigned to that block.</div>
+        </details>
+
+        <details open>
+          <summary>Crime Actions</summary>
+          <select id="crimeType">
+            <option value="robbery">Robbery</option>
+            <option value="extortion">Extortion</option>
+            <option value="heist">Heist</option>
+            <option value="bribery">Bribery</option>
+          </select>
+          <select id="crimeCrewCount">
+            <option value="1">1 Crew</option>
+            <option value="2" selected>2 Crew</option>
+            <option value="3">3 Crew</option>
+          </select>
+          <button class="btn-blue" id="crimeBtn">Execute Crime</button>
+          <button class="btn-green" id="endTurnBtn">End Turn</button>
+        </details>
+
+        <details open>
+          <summary>Event Log</summary>
+          <div class="history" id="history"></div>
+        </details>
+      </aside>
+    </main>
+
+    <section class="panel readme">
+      <h3>README / Master Guide: Gameplay, Flow, and Winning Styles</h3>
+      <p><strong>Core Loop:</strong> Every turn is one day, and every 7 turns is a full week rhythm. Your objective is to build criminal momentum without triggering collapse. You win by controlling at least 15 blocks and reaching $100,000 before turn 100. You lose if Heat reaches 100 (federal raid) or if cash remains below $0 for 3 straight turns.</p>
+      <p><strong>Map & Control:</strong> The city is a 5x5 tactical grid. Each block has district type (residential/commercial/industrial/government), wealth stars, and ownership state (player/neutral/rival). Higher control means stronger passive income and safer scaling. Neutral takeovers cost $3000 and roll success at 60% + influence bonus.</p>
+      <p><strong>Economy & Risk:</strong> Money comes from controlled blocks (+$200 each) and businesses. Speakeasy, Gambling Den, and Smuggling Warehouse produce large daily profit when at least 2 crew are assigned. Crimes add burst income but also risk: failure can remove crew, spike heat, or drain cash.</p>
+      <p><strong>Crew Doctrine:</strong> Crew stats define operation strength. Combat helps extortion and defense, stealth powers robbery, intelligence powers heists/bribery, loyalty filters reliability. Keep a reserve crew unassigned so you can still execute crimes while businesses keep printing cash.</p>
+
+      <h4>Initial 10-Turn Plan (Recommended)</h4>
+      <ol>
+        <li><strong>Turn 1-2:</strong> Secure one nearby neutral block, recruit one crew if cash permits, and avoid high-heat crimes early.</li>
+        <li><strong>Turn 3-5:</strong> Build first Speakeasy on safe controlled block and assign 2 crew immediately to start passive income.</li>
+        <li><strong>Turn 6-8:</strong> Expand to 4-6 controlled blocks; use robbery/extortion selectively for liquidity spikes.</li>
+        <li><strong>Turn 9-10:</strong> Prepare for rival pressure cycle (every 10 turns) by assigning combat-oriented defenders.</li>
+      </ol>
+
+      <h4>Four Winning Strategies</h4>
+      <ol>
+        <li><strong>1) Quiet Expansion (Low-Heat Macro):</strong> Prioritize takeovers + business income, commit crimes rarely, and keep heat low via inactive turns. This is the most stable route for consistent wins.</li>
+        <li><strong>2) Balanced Syndicate (Hybrid):</strong> Mix passive income with targeted crimes. Run robbery/extortion when cash dips, then pause to bleed heat. Best for adaptable players.</li>
+        <li><strong>3) Intelligence Cartel (Heist + Bribery Cycle):</strong> Recruit high-intelligence crew, run high-value heists, then immediately bribe to reset heat. High skill ceiling, high snowball potential.</li>
+        <li><strong>4) Territory Fortress (Control First):</strong> Rush 15+ blocks early, defend with combat crews, and rely on map control income. Slower cash spike but strong board dominance and safer endgame.</li>
+      </ol>
+
+      <h4>Late-Game Closing Checklist</h4>
+      <ul>
+        <li>Hold 15+ blocks with at least 2 defended frontier blocks.</li>
+        <li>Keep heat under 75 so unlucky failures don't instantly end your run.</li>
+        <li>Upgrade your strongest businesses to 2x output before turn 80.</li>
+        <li>Preserve 1-2 unassigned flexible crew for emergencies.</li>
+      </ul>
+    </section>
+  </div>
+
+  <div class="modal" id="modal">
+    <div class="modal-box">
+      <h3 id="modalTitle">Notice</h3>
+      <div id="modalBody"></div>
+      <div class="modal-foot"><button id="modalClose">Close</button></div>
+    </div>
+  </div>
+
+  <div class="float-msg" id="toast"></div>
+
+  <script>
+    const SAVE_KEY = 'syndicate_city_save_v2';
+    const TUTORIAL_KEY = 'syndicate_city_tutorial_seen';
+    const districtTypes = ['residential', 'commercial', 'industrial', 'government'];
+    const businessData = {
+      speakeasy: { cost: 5000, income: 500, label: 'Speakeasy' },
+      den: { cost: 8000, income: 800, label: 'Gambling Den' },
+      warehouse: { cost: 12000, income: 1200, label: 'Smuggling Warehouse' }
+    };
+    const crimeData = {
+      robbery: { base: 50, stat: 'stealth', mult: 2, heat: 10, min: 2000, max: 5000 },
+      extortion: { base: 40, stat: 'combat', mult: 3, heat: 15, min: 3000, max: 8000 },
+      heist: { base: 30, stat: 'intelligence', mult: 4, heat: 30, min: 10000, max: 25000 },
+      bribery: { base: 70, stat: 'intelligence', mult: 2, heat: -25, min: 0, max: 0, cost: 5000 }
+    };
+
+    let gameState;
+    let selectedBlockId = null;
+    let audioCtx = null;
+    let musicNodes = [];
+
+    const el = (id) => document.getElementById(id);
+    const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+    /** Builds rich inline SVG illustrations for district/building visuals. */
+    function blockIllustration(type, business) {
+      const scene = business ? `business-${business.type}` : type;
+      const maps = {
+        residential: {
+          sky: '#4f8bb7', roof: '#b56f53', wall: '#d7d0c4', accent: '#88c98b', detail: '#f3e9c8', road: '#373f4a', glow: '#f7d68a'
+        },
+        commercial: {
+          sky: '#355f9f', roof: '#4f6ea9', wall: '#89b7dd', accent: '#c8f2ff', detail: '#f5d8a0', road: '#2a3443', glow: '#9ee8ff'
+        },
+        industrial: {
+          sky: '#5d5f67', roof: '#674f42', wall: '#90806e', accent: '#cf9157', detail: '#f0cf88', road: '#323235', glow: '#ffb574'
+        },
+        government: {
+          sky: '#4c5f90', roof: '#b2c4db', wall: '#dde5f0', accent: '#6d8dcb', detail: '#f8f2d6', road: '#2f3a4f', glow: '#d6e8ff'
+        },
+        'business-speakeasy': {
+          sky: '#4e3a53', roof: '#3d2537', wall: '#915d78', accent: '#f35f9b', detail: '#ffe0a6', road: '#2f2532', glow: '#ff7db5'
+        },
+        'business-den': {
+          sky: '#355343', roof: '#284436', wall: '#4d8262', accent: '#6de4a4', detail: '#f1f3a7', road: '#22332d', glow: '#89ffc2'
+        },
+        'business-warehouse': {
+          sky: '#4f4b57', roof: '#46414e', wall: '#7e8091', accent: '#9fa8ff', detail: '#ffe7ab', road: '#272834', glow: '#b7bfff'
+        }
+      };
+      const p = maps[scene] || maps[type] || maps.residential;
+      const label = business ? businessData[business.type].label : `${type[0].toUpperCase() + type.slice(1)} Block`;
+      const profile = {
+        residential: `<polygon points='20,60 42,34 64,60' fill='${p.roof}'/><rect x='25' y='40' width='35' height='20' rx='3' fill='${p.wall}'/>`,
+        commercial: `<rect x='20' y='30' width='45' height='30' rx='2' fill='${p.wall}'/><rect x='24' y='36' width='37' height='8' fill='${p.detail}'/><rect x='24' y='48' width='37' height='8' fill='${p.detail}'/>`,
+        industrial: `<rect x='20' y='36' width='48' height='24' rx='2' fill='${p.wall}'/><rect x='26' y='24' width='8' height='12' fill='${p.roof}'/><rect x='38' y='21' width='7' height='15' fill='${p.roof}'/>`,
+        government: `<polygon points='20,40 43,28 66,40' fill='${p.roof}'/><rect x='22' y='40' width='42' height='20' rx='2' fill='${p.wall}'/><rect x='40' y='43' width='6' height='17' fill='${p.accent}'/>`,
+        'business-speakeasy': `<rect x='18' y='35' width='50' height='25' rx='3' fill='${p.wall}'/><rect x='24' y='41' width='38' height='8' fill='${p.glow}'/><text x='43' y='56' text-anchor='middle' font-size='7' fill='${p.detail}'>JAZZ</text>`,
+        'business-den': `<rect x='18' y='34' width='50' height='26' rx='3' fill='${p.wall}'/><circle cx='30' cy='47' r='4' fill='${p.glow}'/><circle cx='42' cy='47' r='4' fill='${p.glow}'/><circle cx='54' cy='47' r='4' fill='${p.glow}'/>`,
+        'business-warehouse': `<rect x='18' y='36' width='52' height='24' rx='2' fill='${p.wall}'/><rect x='22' y='24' width='10' height='12' fill='${p.roof}'/><rect x='44' y='24' width='10' height='12' fill='${p.roof}'/>`
+      };
+      const leftShape = profile[scene] || profile[type] || profile.residential;
+      const centerShape = business
+        ? `<rect x='80' y='17' width='46' height='43' rx='4' fill='${p.wall}'/><rect x='87' y='24' width='32' height='9' fill='${p.glow}'/><rect x='87' y='38' width='32' height='16' fill='${p.detail}'/>`
+        : `<rect x='82' y='18' width='42' height='41' rx='3' fill='url(#g2)'/>`;
+      const rightShape = business
+        ? `<rect x='132' y='30' width='34' height='30' rx='3' fill='${p.roof}'/><rect x='137' y='36' width='24' height='8' fill='${p.detail}'/>`
+        : `<rect x='130' y='27' width='34' height='32' rx='3' fill='url(#g2)'/>`;
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 190 80'>
+        <defs>
+          <linearGradient id='g1' x1='0' y1='0' x2='0' y2='1'><stop offset='0' stop-color='${p.sky}'/><stop offset='1' stop-color='#1a2533'/></linearGradient>
+          <linearGradient id='g2' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='${p.wall}'/><stop offset='1' stop-color='${p.roof}'/></linearGradient>
+          <pattern id='grain' width='6' height='6' patternUnits='userSpaceOnUse'>
+            <circle cx='1' cy='2' r='0.7' fill='rgba(255,255,255,.12)'/>
+            <circle cx='5' cy='4' r='0.6' fill='rgba(0,0,0,.2)'/>
+          </pattern>
+        </defs>
+        <rect width='190' height='80' fill='url(#g1)'/>
+        <rect y='58' width='190' height='22' fill='${p.road}'/>
+        ${leftShape}
+        ${centerShape}
+        ${rightShape}
+        <rect x='16' y='20' width='54' height='42' rx='4' fill='url(#grain)' opacity='.45'/>
+        <rect x='80' y='16' width='46' height='46' rx='4' fill='url(#grain)' opacity='.45'/>
+        <rect x='130' y='24' width='38' height='38' rx='4' fill='url(#grain)' opacity='.45'/>
+        <rect x='76' y='58' width='38' height='2' fill='rgba(255,255,255,.25)'/>
+        <circle cx='20' cy='50' r='7' fill='${p.accent}'/><circle cx='170' cy='53' r='6' fill='${p.accent}'/>
+        <rect x='6' y='7' width='84' height='13' rx='6' fill='rgba(0,0,0,.28)'/>
+        <text x='48' y='16' text-anchor='middle' font-size='8' font-family='Arial' fill='${p.glow}'>${label}</text>
+      </svg>`;
+      return `url("data:image/svg+xml;utf8,${encodeURIComponent(svg)}")`;
+    }
+
+    /** Initializes a new game state. */
+    function createInitialState() {
+      return {
+        turn: 1,
+        cash: 10000,
+        influence: 0,
+        heat: 0,
+        crew: Array.from({ length: 3 }, (_, i) => makeCrew(`Starter-${i + 1}`)),
+        districts: generateDistricts(),
+        log: ['Welcome to Syndicate City.'],
+        debtTurns: 0,
+        crimeThisTurn: false,
+        gameOver: false,
+        result: null
+      };
+    }
+
+    /** Creates crew member with randomized stats. */
+    function makeCrew(name = `Crew-${Date.now().toString().slice(-4)}`) {
+      return {
+        id: crypto.randomUUID(), name,
+        combat: rand(1, 10), stealth: rand(1, 10), intelligence: rand(1, 10), loyalty: rand(1, 100),
+        assignment: null
+      };
+    }
+
+    /** Creates 5x5 district map with type, wealth, and control. */
+    function generateDistricts() {
+      const districts = [];
+      for (let i = 0; i < 25; i++) {
+        const c = Math.random();
+        districts.push({
+          id: i,
+          type: districtTypes[rand(0, districtTypes.length - 1)],
+          wealth: rand(1, 5),
+          control: c < 0.12 ? 'player' : c < 0.28 ? 'rival' : 'neutral',
+          business: null
+        });
+      }
+      if (!districts.some(d => d.control === 'player')) districts[rand(0, 24)].control = 'player';
+      return districts;
+    }
+
+    function controlledBlocks() { return gameState.districts.filter(d => d.control === 'player'); }
+
+    /** Draws full UI state. */
+    function renderAll() {
+      el('cash').textContent = `$${gameState.cash.toLocaleString()}`;
+      el('inf').textContent = gameState.influence;
+      el('heat').textContent = gameState.heat;
+      el('crew').textContent = `${gameState.crew.length}/10`;
+      el('turn').textContent = `${gameState.turn}/100`;
+      el('control').textContent = `${controlledBlocks().length}/25`;
+      const day = ((gameState.turn - 1) % 7) + 1;
+      el('weekday').textContent = `Day ${day} / 7`;
+      el('heatFill').style.width = `${Math.max(0, Math.min(100, gameState.heat))}%`;
+      el('r-heat').classList.toggle('heat-danger', gameState.heat >= 80);
+      pulse(['r-cash', 'r-inf', 'r-heat', 'r-crew']);
+      renderGrid(); renderCrew(); renderLog();
+    }
+
+    function pulse(ids) {
+      ids.forEach(id => {
+        const node = el(id);
+        node.classList.remove('pulse');
+        requestAnimationFrame(() => node.classList.add('pulse'));
+      });
+    }
+
+    /** Draws the city block grid. */
+    function renderGrid() {
+      const grid = el('grid');
+      grid.innerHTML = '';
+      gameState.districts.forEach(block => {
+        const div = document.createElement('div');
+        div.className = `block t-${block.type} c-${block.control} ${selectedBlockId === block.id ? 'selected' : ''}`;
+        const assignedWorkers = gameState.crew.filter(c => c.assignment === `Block ${block.id + 1}`).length;
+        const workerIcons = Array.from({ length: Math.min(5, assignedWorkers) }, () => `<svg class="worker-icon" viewBox="0 0 24 24"><use href="#i-worker"/></svg>`).join('');
+        div.innerHTML = `
+          <div><strong>${block.type[0].toUpperCase() + block.type.slice(1)}</strong><div class="tiny">Block #${block.id + 1}</div></div>
+          <div class="illustration" style='background-image:${blockIllustration(block.type, block.business)};'></div>
+          <div class="stars">${'★'.repeat(block.wealth)}</div>
+          <div class="tag">${block.control}</div>
+          <div class="workers">${workerIcons || '<span class="tiny">No workers</span>'}</div>
+          <div class="tiny">${block.business ? `${businessData[block.business.type].label}${block.business.upgraded ? ' • UP' : ''}` : 'No business'}</div>
+        `;
+        div.onclick = () => onBlockClick(block.id);
+        grid.appendChild(div);
+      });
+    }
+
+    /** Draws crew cards in sidebar. */
+    function renderCrew() {
+      const list = el('crewList');
+      list.innerHTML = '';
+      gameState.crew.forEach(c => {
+        const item = document.createElement('div');
+        item.className = 'crew-item';
+        item.innerHTML = `<strong><svg class="human" viewBox="0 0 24 24"><use href="#i-worker"/></svg>${c.name}</strong><br/>C:${c.combat} S:${c.stealth} I:${c.intelligence} L:${c.loyalty}<br/>Assigned: ${c.assignment || 'None'}`;
+        list.appendChild(item);
+      });
+    }
+
+    function renderLog() {
+      el('history').innerHTML = gameState.log.slice(-24).reverse().map(i => `<div>${i}</div>`).join('');
+    }
+
+    function addLog(msg) { gameState.log.push(`[T${gameState.turn}] ${msg}`); }
+
+    function toast(msg, tone = 'info') {
+      const t = el('toast');
+      t.textContent = msg;
+      t.style.borderLeftColor = tone === 'good' ? 'var(--cash)' : tone === 'bad' ? 'var(--heat)' : 'var(--inf)';
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 1800);
+    }
+
+    function popup(title, html) {
+      el('modalTitle').textContent = title;
+      el('modalBody').innerHTML = html;
+      el('modal').classList.add('show');
+    }
+
+    function closeModal() { el('modal').classList.remove('show'); }
+
+    /** Creates tiny particles for UI juice. */
+    function spawnParticles(color = '#70b7ff', count = 10) {
+      for (let i = 0; i < count; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle';
+        p.style.left = `${window.innerWidth - 60}px`;
+        p.style.top = `${window.innerHeight - 60}px`;
+        p.style.color = color;
+        p.style.setProperty('--x', `${rand(-130, 30)}px`);
+        p.style.setProperty('--y', `${rand(-140, 20)}px`);
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 950);
+      }
+    }
+
+    /** Block click behavior for selection and takeover. */
+    function onBlockClick(id) {
+      selectedBlockId = id;
+      const block = gameState.districts.find(d => d.id === id);
+      if (block.control === 'neutral') {
+        if (gameState.cash < 3000) { toast('Not enough cash for takeover.', 'bad'); renderAll(); return; }
+        if (confirm('Attempt takeover for $3000?')) {
+          gameState.cash -= 3000;
+          const chance = Math.min(95, 60 + Math.floor(gameState.influence / 5));
+          if (rand(1, 100) <= chance) {
+            block.control = 'player'; gameState.influence += 2;
+            addLog(`Takeover succeeded on block ${id + 1}.`); toast('Takeover success!', 'good'); spawnParticles('#63f49f', 12);
+          } else {
+            gameState.influence = Math.max(0, gameState.influence - 1);
+            addLog(`Takeover failed on block ${id + 1}.`); toast('Takeover failed.', 'bad'); spawnParticles('#ff697d', 8);
+          }
+        }
+      }
+      renderAll();
+    }
+
+    /** Recruits one crew member if allowed. */
+    function recruitCrew() {
+      if (gameState.crew.length >= 10) return popup('Crew Full', 'Maximum crew size (10) reached.');
+      if (gameState.cash < 1000) return popup('Insufficient Cash', 'Need $1000 to recruit.');
+      gameState.cash -= 1000;
+      const recruit = makeCrew();
+      gameState.crew.push(recruit);
+      gameState.influence += 1;
+      addLog(`Recruited ${recruit.name}.`);
+      toast(`${recruit.name} joined.`, 'good');
+      spawnParticles('#70b7ff', 8);
+      renderAll();
+    }
+
+    /** Opens assignment modal for crew to business blocks. */
+    function manageAssignments() {
+      const businessBlocks = controlledBlocks().filter(b => b.business);
+      if (!businessBlocks.length) return popup('No Businesses', 'Build a business first on a controlled block.');
+      const crewOptions = gameState.crew.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+      const blockOptions = businessBlocks.map(b => `<option value="${b.id}">Block ${b.id + 1} - ${businessData[b.business.type].label}</option>`).join('');
+      popup('Crew Assignments', `
+        <p>Select crew and assign them to a business block. Minimum 2 crew per business for production.</p>
+        <select id="crewPick">${crewOptions}</select>
+        <select id="blockPick">${blockOptions}</select>
+        <button id="confirmAssign" class="btn-blue">Assign Crew</button>
+      `);
+      setTimeout(() => {
+        const btn = el('confirmAssign');
+        if (!btn) return;
+        btn.onclick = () => {
+          const crewId = el('crewPick').value;
+          const blockId = Number(el('blockPick').value);
+          const crew = gameState.crew.find(c => c.id === crewId);
+          crew.assignment = `Block ${blockId + 1}`;
+          addLog(`${crew.name} assigned to block ${blockId + 1}.`);
+          toast(`${crew.name} assigned.`, 'info');
+          closeModal();
+          renderAll();
+        };
+      }, 0);
+    }
+
+    /** Builds business on selected controlled block. */
+    function buildBusiness(type) {
+      const block = gameState.districts.find(d => d.id === selectedBlockId);
+      if (!block) return popup('Select Block', 'Select a controlled block first.');
+      if (block.control !== 'player') return popup('Invalid Block', 'You can only build on controlled blocks.');
+      if (block.business) return popup('Already Built', 'This block already has a business.');
+      const cost = businessData[type].cost;
+      if (gameState.cash < cost) return popup('Insufficient Cash', `Need $${cost.toLocaleString()}.`);
+      gameState.cash -= cost;
+      block.business = { type, upgraded: false };
+      addLog(`Built ${businessData[type].label} on block ${block.id + 1}.`);
+      toast(`${businessData[type].label} established.`, 'good');
+      spawnParticles('#ffc86d', 12);
+      renderAll();
+    }
+
+    /** Upgrades selected business once for double production. */
+    function upgradeBusiness() {
+      const block = gameState.districts.find(d => d.id === selectedBlockId);
+      if (!block || !block.business) return popup('No Business', 'Select a block with your business.');
+      if (block.business.upgraded) return popup('Max Upgrade', 'Already upgraded.');
+      const cost = businessData[block.business.type].cost * 2;
+      if (gameState.cash < cost) return popup('Insufficient Cash', `Need $${cost.toLocaleString()}.`);
+      gameState.cash -= cost;
+      block.business.upgraded = true;
+      addLog(`Upgraded business on block ${block.id + 1}.`);
+      toast('Business upgraded to 2x output.', 'good');
+      renderAll();
+    }
+
+    function pickCrew(count) {
+      return gameState.crew.filter(c => c.loyalty > 15).slice(0, count);
+    }
+
+    /** Runs a chosen crime and applies success/failure outcomes. */
+    function runCrime() {
+      const type = el('crimeType').value;
+      const count = Number(el('crimeCrewCount').value);
+      const crew = pickCrew(count);
+      if (crew.length < count) return popup('Not Enough Crew', 'Need more available crew for this operation.');
+      const cfg = crimeData[type];
+      if (type === 'bribery' && gameState.cash < cfg.cost) return popup('Insufficient Cash', 'Bribery costs $5000.');
+      if (type === 'bribery') gameState.cash -= cfg.cost;
+
+      const avg = Math.round(crew.reduce((a, c) => a + c[cfg.stat], 0) / crew.length);
+      const chance = Math.min(95, cfg.base + avg * cfg.mult);
+      const success = rand(1, 100) <= chance;
+      gameState.crimeThisTurn = true;
+
+      if (success) {
+        if (type === 'bribery') {
+          gameState.heat = Math.max(0, gameState.heat - 25);
+          addLog('Bribery succeeded. Heat reduced by 25.');
+          toast('Heat cooled through bribery.', 'good');
+        } else {
+          const gain = rand(cfg.min, cfg.max);
+          gameState.cash += gain;
+          gameState.heat = Math.min(100, gameState.heat + cfg.heat);
+          gameState.influence += 1;
+          addLog(`${type} succeeded at ${chance}% odds. +$${gain.toLocaleString()}.`);
+          toast(`${type} success +$${gain.toLocaleString()}`, 'good');
+        }
+        spawnParticles('#63f49f', 14);
+      } else {
+        const fail = rand(1, 3);
+        if (fail === 1) {
+          const loss = Math.floor(Math.max(0, gameState.cash) * 0.2);
+          gameState.cash -= loss;
+          addLog(`${type} failed. Lost $${loss.toLocaleString()}.`);
+        } else if (fail === 2) {
+          gameState.heat = Math.min(100, gameState.heat + 10);
+          addLog(`${type} failed. Heat +10.`);
+        } else {
+          const arrested = crew[rand(0, crew.length - 1)];
+          gameState.crew = gameState.crew.filter(c => c.id !== arrested.id);
+          addLog(`${type} failed. ${arrested.name} arrested.`);
+        }
+        toast(`${type} failed`, 'bad');
+        spawnParticles('#ff697d', 12);
+      }
+
+      popup('Crime Result', `${type.toUpperCase()} used ${crew.length} crew.<br/>Success chance: ${chance}%`);
+      renderAll();
+    }
+
+    /** Processes passive income and advances one day. */
+    function endTurn() {
+      if (gameState.gameOver) return;
+      let income = controlledBlocks().length * 200;
+
+      gameState.districts.forEach(block => {
+        if (block.control !== 'player' || !block.business) return;
+        const assigned = gameState.crew.filter(c => c.assignment === `Block ${block.id + 1}`).length;
+        if (assigned >= 2) {
+          const base = businessData[block.business.type].income;
+          income += block.business.upgraded ? base * 2 : base;
+        }
+      });
+
+      gameState.cash += income;
+      if (!gameState.crimeThisTurn) gameState.heat = Math.max(0, gameState.heat - 5);
+      gameState.crimeThisTurn = false;
+
+      if (gameState.turn % 10 === 0) rivalTakeover();
+      gameState.debtTurns = gameState.cash < 0 ? gameState.debtTurns + 1 : 0;
+
+      addLog(`Turn end income: $${income.toLocaleString()}.`);
+      gameState.turn += 1;
+      saveGame();
+      checkWinLose();
+      renderAll();
+    }
+
+    /** Rival AI takeover attempt every 10 turns. */
+    function rivalTakeover() {
+      const owned = controlledBlocks();
+      if (!owned.length) return;
+      const target = owned[rand(0, owned.length - 1)];
+      const defenders = gameState.crew.filter(c => c.assignment === `Block ${target.id + 1}`);
+      const avgCombat = defenders.length ? defenders.reduce((s, c) => s + c.combat, 0) / defenders.length : 3;
+      const defendChance = Math.min(90, 35 + avgCombat * 8);
+      if (rand(1, 100) > defendChance) {
+        target.control = 'rival';
+        addLog(`Rivals seized block ${target.id + 1}.`);
+        toast('Rivals seized territory!', 'bad');
+      } else {
+        addLog(`Defended block ${target.id + 1} from rivals.`);
+        toast('Defense held this week.', 'good');
+      }
+    }
+
+    /** Checks all victory/defeat conditions. */
+    function checkWinLose() {
+      const owned = controlledBlocks().length;
+      if (gameState.heat >= 100) return finish('lose', 'Heat reached 100. Federal raid ended your syndicate.');
+      if (gameState.debtTurns >= 3) return finish('lose', 'Cash stayed below $0 for 3 turns.');
+      if (gameState.turn > 100) return finish('lose', 'Turn limit reached (100).');
+      if (owned >= 15 && gameState.cash >= 100000) return finish('win', 'You rule Syndicate City. Victory.');
+    }
+
+    function finish(state, reason) {
+      gameState.gameOver = true;
+      gameState.result = state;
+      addLog(reason);
+      popup(state === 'win' ? 'Victory' : 'Game Over', reason);
+      renderAll();
+    }
+
+    /** localStorage persistence helpers. */
+    function saveGame() {
+      localStorage.setItem(SAVE_KEY, JSON.stringify(gameState));
+      addLog('Game saved.');
+      toast('Saved to localStorage.', 'info');
+    }
+
+    function loadGame() {
+      const raw = localStorage.getItem(SAVE_KEY);
+      if (!raw) return popup('No Save', 'No save found in localStorage.');
+      gameState = JSON.parse(raw);
+      addLog('Loaded save.');
+      renderAll();
+    }
+
+    function resetSave() {
+      localStorage.removeItem(SAVE_KEY);
+      popup('Reset Complete', 'Saved game removed.');
+    }
+
+    /** Shows first-run tutorial popup. */
+    function maybeTutorial() {
+      if (localStorage.getItem(TUTORIAL_KEY)) return;
+      popup('Welcome to Syndicate City', `
+        <p><strong>Quick Tutorial</strong></p>
+        <ul>
+          <li>Click neutral blocks to attempt takeover ($3000).</li>
+          <li>Build businesses on controlled blocks.</li>
+          <li>Assign at least 2 crew to each business for production.</li>
+          <li>Run crimes for higher profits, but watch Heat.</li>
+          <li>End Turn to progress one day and auto-save.</li>
+        </ul>
+      `);
+      localStorage.setItem(TUTORIAL_KEY, '1');
+    }
+
+    /** Lightweight ambient soundtrack using WebAudio (minor style pad). */
+    function toggleMusic() {
+      const btn = el('musicBtn');
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (musicNodes.length) {
+        musicNodes.forEach(n => n.stop && n.stop());
+        musicNodes = [];
+        btn.textContent = 'Enable Ambient Music';
+        toast('Music off.', 'info');
+        return;
+      }
+      const now = audioCtx.currentTime;
+      const progression = [146.83, 174.61, 130.81, 164.81]; // Dm, F, C, Em vibes
+      for (let i = 0; i < 16; i++) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = i % 2 ? 'triangle' : 'sine';
+        osc.frequency.value = progression[i % progression.length] * (i % 3 === 0 ? 1 : 0.5);
+        gain.gain.setValueAtTime(0.0001, now + i * 1.2);
+        gain.gain.exponentialRampToValueAtTime(0.05, now + i * 1.2 + 0.25);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 1.2 + 1.15);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(now + i * 1.2);
+        osc.stop(now + i * 1.2 + 1.18);
+        musicNodes.push(osc);
+      }
+      btn.textContent = 'Disable Ambient Music';
+      toast('Ambient loop started.', 'good');
+      setTimeout(() => { if (musicNodes.length) musicNodes = []; btn.textContent = 'Enable Ambient Music'; }, 19500);
+    }
+
+    function bindEvents() {
+      el('modalClose').onclick = closeModal;
+      el('newGameBtn').onclick = () => { gameState = createInitialState(); addLog('New game started.'); renderAll(); };
+      el('saveBtn').onclick = () => { saveGame(); renderAll(); };
+      el('loadBtn').onclick = loadGame;
+      el('resetBtn').onclick = resetSave;
+      el('recruitBtn').onclick = recruitCrew;
+      el('assignBtn').onclick = manageAssignments;
+      el('b-speakeasy').onclick = () => buildBusiness('speakeasy');
+      el('b-den').onclick = () => buildBusiness('den');
+      el('b-warehouse').onclick = () => buildBusiness('warehouse');
+      el('upgradeBtn').onclick = upgradeBusiness;
+      el('crimeBtn').onclick = runCrime;
+      el('endTurnBtn').onclick = endTurn;
+      el('musicBtn').onclick = toggleMusic;
+    }
+
+    /** App bootstrap. */
+    function init() {
+      gameState = createInitialState();
+      bindEvents();
+      renderAll();
+      maybeTutorial();
+      saveGame();
+    }
+
+    init();
+  </script>
+</body>
+</html>
