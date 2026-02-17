@@ -544,7 +544,7 @@
         const workerIcons = Array.from({ length: Math.min(5, assignedWorkers) }, () => `<svg class="worker-icon" viewBox="0 0 24 24"><use href="#i-worker"/></svg>`).join('');
         div.innerHTML = `
           <div><strong>${block.type[0].toUpperCase() + block.type.slice(1)}</strong><div class="tiny">Block #${block.id + 1}</div></div>
-          <div class="illustration" style="background-image:${blockIllustration(block.type, block.business)}"></div>
+          <div class="illustration" style='background-image:${blockIllustration(block.type, block.business)};'></div>
           <div class="stars">${'★'.repeat(block.wealth)}</div>
           <div class="tag">${block.control}</div>
           <div class="workers">${workerIcons || '<span class="tiny">No workers</span>'}</div>
